@@ -1,0 +1,590 @@
+<!DOCTYPE html>
+<!--
+  MF CLEAN — Site de commande en ligne
+
+  ⚠️ À FAIRE AVANT DE PUBLIER (cherche "MODIFIE-MOI" dans le code) :
+  1. Le prix de "Serviette blanche" n'a pas été précisé — actuellement à 0F, à corriger.
+  2. Les prix des produits boutique sont des exemples à ajuster.
+  3. Le numéro WhatsApp est déjà réglé sur 221710905632 (71 090 56 32) — change-le si besoin.
+
+  Comment ça marche : le client choisit son linge et/ou ses produits, remplit ses infos,
+  choisit son mode de paiement, puis clique "Commander via WhatsApp" — ça ouvre WhatsApp
+  avec un message déjà rédigé qui résume toute sa commande, à t'envoyer directement.
+-->
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+<title>MF Clean — Commander</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
+<style>
+  :root{
+    --navy:#0E1E3D;
+    --navy-soft:#16294f;
+    --orange:#F4791F;
+    --cream:#FBF8F3;
+    --line:#e9e2d4;
+    --ink:#241a10;
+    --muted:#8a7f6e;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    font-family:'Poppins',sans-serif;
+    background:var(--cream);
+    color:var(--ink);
+    padding-bottom:90px;
+  }
+
+  header{
+    background:var(--navy);
+    padding:16px 18px 14px;
+    position:sticky;
+    top:0;
+    z-index:20;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+  }
+  .brand-word{font-weight:800;font-size:19px;color:#fff;letter-spacing:.5px;}
+  .brand-word span{color:var(--orange);}
+  .brand-sub{font-family:'Space Mono',monospace;font-size:9px;letter-spacing:2px;color:#a9b4cc;margin-top:2px;}
+  .cart-btn{
+    position:relative;
+    background:var(--orange);
+    border:none;
+    color:#fff;
+    width:42px;height:42px;
+    border-radius:12px;
+    font-size:19px;
+    cursor:pointer;
+    display:flex;align-items:center;justify-content:center;
+  }
+  .cart-badge{
+    position:absolute;top:-6px;right:-6px;
+    background:#fff;color:var(--navy);
+    font-family:'Space Mono',monospace;
+    font-size:10.5px;font-weight:700;
+    min-width:18px;height:18px;border-radius:9px;
+    display:flex;align-items:center;justify-content:center;
+    padding:0 4px;
+  }
+
+  .tabs{
+    display:flex;
+    gap:8px;
+    padding:14px 16px 0;
+    max-width:520px;margin:0 auto;
+  }
+  .tab-btn{
+    flex:1;
+    padding:12px;
+    border-radius:12px;
+    border:1.5px solid var(--line);
+    background:#fff;
+    font-family:'Poppins',sans-serif;
+    font-weight:600;
+    font-size:13.5px;
+    cursor:pointer;
+    color:var(--muted);
+  }
+  .tab-btn.active{
+    background:var(--navy);
+    border-color:var(--navy);
+    color:#fff;
+  }
+
+  .container{max-width:520px;margin:0 auto;padding:18px 16px;}
+  .view{display:none;}
+  .view.active{display:block;}
+
+  .section-title{font-size:16px;font-weight:700;margin:4px 0 3px;}
+  .section-sub{font-size:12.5px;color:var(--muted);margin:0 0 16px;line-height:1.5;}
+
+  .sub-toggle{
+    display:flex;gap:8px;margin-bottom:18px;
+  }
+  .sub-btn{
+    flex:1;padding:10px;border-radius:999px;
+    border:1.5px solid var(--navy);
+    background:#fff;color:var(--navy);
+    font-size:12.5px;font-weight:600;cursor:pointer;
+  }
+  .sub-btn.active{background:var(--navy);color:#fff;}
+
+  .card{
+    background:#fff;
+    border:1.5px solid var(--line);
+    border-radius:14px;
+    padding:16px;
+    margin-bottom:14px;
+  }
+  .field-label{
+    font-family:'Space Mono',monospace;
+    font-size:10.5px;letter-spacing:1.5px;text-transform:uppercase;
+    color:var(--muted);margin:0 0 8px;
+  }
+  input[type=text], input[type=tel], input[type=date], textarea{
+    width:100%;border:1.5px solid var(--line);border-radius:10px;
+    padding:11px 12px;font-family:'Poppins',sans-serif;font-size:13.5px;
+    background:#fff;color:var(--ink);margin-bottom:14px;
+  }
+  textarea{resize:none;}
+  input:focus,textarea:focus{outline:2px solid var(--orange);outline-offset:1px;}
+
+  .linge-row{
+    display:flex;justify-content:space-between;align-items:center;
+    padding:11px 0;border-bottom:1px solid var(--line);
+  }
+  .linge-row:last-child{border-bottom:none;}
+  .linge-name{font-size:12.5px;font-weight:600;}
+  .linge-price{font-size:11px;color:var(--muted);margin-top:2px;}
+
+  .stepper{display:flex;align-items:center;gap:10px;}
+  .stepper button{
+    width:30px;height:30px;border-radius:8px;border:1.5px solid var(--line);
+    background:#fff;font-size:16px;cursor:pointer;color:var(--navy);font-weight:700;
+  }
+  .stepper span{font-weight:700;font-size:14px;min-width:20px;text-align:center;}
+
+  .btn{
+    width:100%;background:var(--orange);color:#fff;border:none;border-radius:12px;
+    padding:14px;font-family:'Poppins',sans-serif;font-weight:700;font-size:13.5px;
+    cursor:pointer;
+  }
+  .btn:active{transform:scale(.98);}
+  .btn-outline{
+    background:#fff;color:var(--navy);border:1.5px solid var(--navy);
+  }
+
+  .plan-card{
+    background:#fff;border:1.5px solid var(--line);border-radius:14px;
+    padding:18px;margin-bottom:12px;position:relative;
+  }
+  .plan-card.reco{border-color:var(--orange);}
+  .plan-reco-tag{
+    position:absolute;top:-10px;right:14px;
+    background:var(--orange);color:#fff;font-size:10px;font-weight:700;
+    padding:4px 10px;border-radius:999px;letter-spacing:.5px;
+  }
+  .plan-title{font-size:15px;font-weight:700;margin:0 0 2px;}
+  .plan-price{font-size:20px;font-weight:800;color:var(--navy);margin:2px 0 6px;}
+  .plan-price span{font-size:11px;font-weight:500;color:var(--muted);}
+  .plan-feats{font-size:12px;color:var(--muted);margin:0 0 14px;line-height:1.7;}
+
+  .prod-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+  .prod-card{
+    background:#fff;border:1.5px solid var(--line);border-radius:14px;
+    padding:12px;display:flex;flex-direction:column;
+  }
+  .prod-icon{
+    font-size:26px;background:var(--cream);border-radius:10px;
+    width:100%;aspect-ratio:1.4;display:flex;align-items:center;justify-content:center;
+    margin-bottom:8px;
+  }
+  .prod-photo{
+    width:100%;aspect-ratio:1.4;object-fit:cover;border-radius:10px;margin-bottom:8px;
+    background:var(--cream);
+  }
+  .prod-name{font-size:12.5px;font-weight:700;margin:0 0 3px;line-height:1.3;}
+  .prod-desc{font-size:10.5px;color:var(--muted);margin:0 0 8px;line-height:1.4;flex:1;}
+  .prod-price{font-size:13px;font-weight:800;color:var(--navy);margin-bottom:8px;}
+  .prod-add{
+    background:var(--navy);color:#fff;border:none;border-radius:8px;
+    padding:8px;font-size:11.5px;font-weight:700;cursor:pointer;
+  }
+
+  .overlay{
+    display:none;position:fixed;inset:0;background:rgba(14,30,61,.55);z-index:50;
+  }
+  .overlay.active{display:block;}
+  .drawer{
+    position:fixed;left:0;right:0;bottom:0;
+    background:var(--cream);
+    border-radius:20px 20px 0 0;
+    max-height:88vh;overflow-y:auto;
+    padding:20px 18px 26px;
+    z-index:51;
+    transform:translateY(100%);
+    transition:transform .25s ease;
+  }
+  .drawer.active{transform:translateY(0);}
+  .drawer-handle{
+    width:40px;height:4px;background:var(--line);border-radius:2px;margin:0 auto 16px;
+  }
+  .drawer h2{font-size:16px;margin:0 0 14px;}
+  .cart-item{
+    display:flex;justify-content:space-between;align-items:center;
+    padding:10px 0;border-bottom:1px solid var(--line);font-size:12.5px;gap:8px;
+  }
+  .cart-item .ci-name{font-weight:600;flex:1;}
+  .cart-item .ci-remove{color:#c0392b;font-size:11px;cursor:pointer;font-weight:600;white-space:nowrap;}
+  .empty-cart{text-align:center;color:var(--muted);font-size:13px;padding:30px 0;}
+
+  .pickup-note{
+    font-size:11.5px;background:#eef1f8;border:1px solid #d7ddec;border-radius:10px;
+    padding:9px 12px;margin-top:10px;color:var(--navy);
+  }
+
+  .total-row{
+    display:flex;justify-content:space-between;font-weight:800;font-size:15px;
+    margin:16px 0;padding-top:12px;border-top:1.5px dashed var(--line);
+  }
+
+  .pay-options{display:flex;gap:8px;margin-bottom:16px;}
+  .pay-opt{
+    flex:1;border:1.5px solid var(--line);border-radius:10px;padding:10px;
+    text-align:center;font-size:11.5px;font-weight:600;cursor:pointer;
+  }
+  .pay-opt.active{border-color:var(--orange);background:#fff3e9;color:var(--navy);}
+  .pay-note{
+    font-size:11.5px;background:#fff3e9;border:1px solid #ffd9b3;border-radius:10px;
+    padding:10px 12px;margin-bottom:16px;line-height:1.5;display:none;
+  }
+  .pay-note.show{display:block;}
+
+  .fab{
+    position:fixed;bottom:18px;left:50%;transform:translateX(-50%);
+    background:var(--navy);color:#fff;border:none;border-radius:999px;
+    padding:14px 26px;font-family:'Poppins',sans-serif;font-weight:700;font-size:13.5px;
+    display:none;align-items:center;gap:8px;cursor:pointer;
+    box-shadow:0 8px 24px rgba(14,30,61,.35);z-index:19;
+  }
+  .fab.show{display:flex;}
+  .fab .fab-badge{
+    background:var(--orange);border-radius:999px;padding:2px 8px;font-size:11px;
+  }
+
+  .footer-note{
+    text-align:center;font-family:'Space Mono',monospace;font-size:10px;
+    letter-spacing:1px;color:var(--muted);margin-top:20px;
+  }
+
+  .timeline{display:flex;flex-direction:column;}
+  .t-step{display:flex;align-items:flex-start;gap:12px;position:relative;padding-bottom:20px;}
+  .t-step:last-child{padding-bottom:0;}
+  .t-dot{
+    width:32px;height:32px;border-radius:50%;background:#fff;border:2px solid var(--line);
+    display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;z-index:1;
+  }
+  .t-line{position:absolute;left:16px;top:32px;bottom:0;width:2px;background:var(--line);}
+  .t-step:last-child .t-line{display:none;}
+  .t-label{font-size:12.5px;font-weight:600;padding-top:6px;color:var(--muted);}
+  .t-step.done .t-dot{background:var(--navy);border-color:var(--navy);color:#fff;}
+  .t-step.done .t-line{background:var(--navy);}
+  .t-step.done .t-label{color:var(--ink);}
+  .t-step.current .t-dot{background:var(--orange);border-color:var(--orange);color:#fff;transform:scale(1.1);}
+  .t-step.current .t-label{color:var(--navy);font-weight:700;}
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <div class="brand-word"><span>MF</span> CLEAN</div>
+    <div class="brand-sub">PRESSING ET ENTRETIEN</div>
+  </div>
+  <button class="cart-btn" onclick="openCart()">🛒<span class="cart-badge" id="cartBadge" style="display:none;">0</span></button>
+</header>
+
+<div class="tabs">
+  <button class="tab-btn active" id="tabLinge" onclick="switchTab('linge')">🧺 Mon linge</button>
+  <button class="tab-btn" id="tabSuivi" onclick="switchTab('suivi')">📦 Suivi</button>
+</div>
+
+<div class="container">
+
+  <div class="view active" id="viewLinge">
+    <div class="section-title">Faites laver votre linge</div>
+    <div class="section-sub">Sans sortir de chez vous. On passe récupérer, on lave, on ramène.</div>
+
+    <div class="sub-toggle">
+      <button class="sub-btn active" id="subRamassage" onclick="switchSub('ramassage')">Ramassage ponctuel</button>
+      <button class="sub-btn" id="subAbonnement" onclick="switchSub('abonnement')">Abonnement mensuel</button>
+    </div>
+
+    <div id="ramassageView">
+      <div class="card">
+        <div class="field-label">Choisissez votre linge</div>
+        <div id="lingeStepperList"></div>
+
+        <div class="field-label" style="margin-top:16px;">Date de ramassage souhaitée</div>
+        <input type="date" id="lingeDate">
+
+        <button class="btn" onclick="addRamassageToCart()">Ajouter au panier</button>
+      </div>
+    </div>
+
+    <div id="abonnementView" style="display:none;">
+      <div class="plan-card">
+        <div class="plan-title">Formule 20 kg</div>
+        <div class="plan-price">17 000 F <span>/ mois</span></div>
+        <div class="plan-feats">✓ Ramassage & livraison gratuits<br>✓ Carte de fidélité<br>✓ Jusqu'à 20kg/mois</div>
+        <button class="btn btn-outline" onclick="addPlanToCart('20 kg', 17000)">Choisir ce forfait</button>
+      </div>
+      <div class="plan-card reco">
+        <div class="plan-reco-tag">POPULAIRE</div>
+        <div class="plan-title">Formule 40 kg</div>
+        <div class="plan-price">29 000 F <span>/ mois</span></div>
+        <div class="plan-feats">✓ Ramassage & livraison gratuits<br>✓ Carte de fidélité<br>✓ Jusqu'à 40kg/mois</div>
+        <button class="btn" onclick="addPlanToCart('40 kg', 29000)">Choisir ce forfait</button>
+      </div>
+      <div class="plan-card">
+        <div class="plan-title">Formule 50 kg</div>
+        <div class="plan-price">38 000 F <span>/ mois</span></div>
+        <div class="plan-feats">✓ Ramassage & livraison gratuits<br>✓ Carte de fidélité<br>✓ Jusqu'à 50kg/mois<br>✓ Statut ambassadeur</div>
+        <button class="btn btn-outline" onclick="addPlanToCart('50 kg', 38000)">Choisir ce forfait</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="view" id="viewSuivi">
+    <div class="section-title">Suivi de commande</div>
+    <div class="section-sub">Entre le numéro de suivi reçu par WhatsApp pour voir où en est ton linge.</div>
+
+    <div class="card">
+      <input type="text" id="trackingInput" placeholder="MFC-1234" style="text-align:center;letter-spacing:1px;font-family:'Space Mono',monospace;text-transform:uppercase;">
+      <button class="btn" onclick="trackOrder()">Suivre ma commande</button>
+      <div id="trackError" style="display:none;text-align:center;color:#c0392b;font-size:12px;margin-top:12px;">Numéro introuvable. Vérifie qu'il est bien écrit (ex : MFC-1234).</div>
+
+      <div id="trackResult" style="display:none;margin-top:20px;">
+        <div style="font-size:13.5px;font-weight:700;text-align:center;margin-bottom:2px;" id="trackName"></div>
+        <div style="font-size:12px;color:var(--muted);text-align:center;margin-bottom:20px;" id="trackLinge"></div>
+        <div id="trackTimeline"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer-note">MF CLEAN · CROISEMENT NDIAKHIRATE · DAKAR · 71 090 56 32</div>
+</div>
+
+<button class="fab" id="fabCart" onclick="openCart()">
+  🛒 Voir mon panier <span class="fab-badge" id="fabBadge">0</span>
+</button>
+
+<div class="overlay" id="overlay" onclick="closeCart()"></div>
+<div class="drawer" id="drawer">
+  <div class="drawer-handle"></div>
+  <h2>Mon panier</h2>
+  <div id="cartItems"><div class="empty-cart">Ton panier est vide pour l'instant.</div></div>
+
+  <div id="cartFooter" style="display:none;">
+    <div class="total-row"><span>Total</span><span id="cartTotal">0 F</span></div>
+
+    <div class="field-label">Tes informations</div>
+    <input type="text" id="custNom" placeholder="Nom complet">
+    <input type="tel" id="custTel" placeholder="Numéro de téléphone">
+    <textarea id="custAdresse" rows="2" placeholder="Adresse de livraison"></textarea>
+
+    <div class="field-label">Mode de paiement</div>
+    <div class="pay-options">
+      <div class="pay-opt active" id="payAcompte" onclick="setPay('acompte')">Acompte 50%</div>
+      <div class="pay-opt" id="payLivraison" onclick="setPay('livraison')">Paiement à la livraison</div>
+    </div>
+    <div class="pay-note show" id="payNoteAcompte">
+      Envoie <b id="acompteAmount">0 F</b> (50% du total) au <b>71 090 56 32</b> (Wave ou Orange Money), puis clique sur le bouton ci-dessous. Le reste (<b id="resteAmount">0 F</b>) sera à régler à la livraison.
+    </div>
+    <div class="pay-note" id="payNoteLivraison">
+      Tu paieras le montant total en espèces directement au moment de la livraison.
+    </div>
+
+    <button class="btn" onclick="sendOrder()">📲 Commander via WhatsApp</button>
+  </div>
+</div>
+
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyBYBAlkEoJrlQFNuTtJWlwEsvz5ye-FFSY",
+  authDomain: "mf-clean-suiv.firebaseapp.com",
+  databaseURL: "https://mf-clean-suiv-ff4cc-default-rtdb.firebaseio.com",
+  projectId: "mf-clean-suiv",
+  storageBucket: "mf-clean-suiv.firebasestorage.app",
+  messagingSenderId: "740695704147",
+  appId: "1:740695704147:web:2e95480873332c50663ca6"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+
+const STAGES = [
+  {id:'collecte', label:'Collecte', icon:'📦'},
+  {id:'tri', label:'Tri', icon:'🗂️'},
+  {id:'lavage', label:'Lavage', icon:'🫧'},
+  {id:'sechage', label:'Séchage', icon:'☀️'},
+  {id:'repassage', label:'Repassage', icon:'🔥'},
+  {id:'livraison', label:'Livraison', icon:'🚚'},
+];
+
+const WHATSAPP_NUMBER = "221710905632"; // MODIFIE-MOI si besoin
+
+// Prix du linge (F CFA)
+const lingeItems = [
+  {id:'sec', name:'Nettoyage à sec', unit:'kg', price:600},
+  {id:'lavage', name:'Lavage & repassage', unit:'kg', price:800},
+  {id:'couette', name:'Couette', unit:'pièce', price:2000},
+  {id:'boubou', name:'Grand boubou', unit:'pièce', price:2500},
+  {id:'costume', name:'Costume', unit:'pièce', price:2000},
+  {id:'rideaux', name:'Rideaux', unit:'pièce', price:2000},
+  {id:'madje', name:'Madjé', unit:'pièce', price:2000},
+  {id:'serviette', name:'Serviette blanche', unit:'pièce', price:500},
+];
+
+let cart = []; // {label, price, qty}
+let lingeQty = {};
+let pickupDate = '';
+let payMode = 'acompte';
+
+// ---- Rendu steppers linge ----
+const stepperList = document.getElementById('lingeStepperList');
+stepperList.innerHTML = lingeItems.map(it => `
+  <div class="linge-row">
+    <div>
+      <div class="linge-name">${it.name}</div>
+      <div class="linge-price">${it.price > 0 ? it.price.toLocaleString('fr-FR') + ' F / ' + it.unit : 'Prix à définir'}</div>
+    </div>
+    <div class="stepper">
+      <button onclick="changeLingeQty('${it.id}',-1)">−</button>
+      <span id="qty-${it.id}">0</span>
+      <button onclick="changeLingeQty('${it.id}',1)">+</button>
+    </div>
+  </div>
+`).join('');
+
+function changeLingeQty(id, delta){
+  lingeQty[id] = Math.max(0, (lingeQty[id]||0) + delta);
+  document.getElementById('qty-'+id).textContent = lingeQty[id];
+}
+
+// ---- Suivi de commande ----
+let trackingRef = null;
+function trackOrder(){
+  const id = document.getElementById('trackingInput').value.trim().toUpperCase();
+  if(!id) return;
+  if(trackingRef){ trackingRef.off(); }
+  trackingRef = db.ref('commandes/' + id);
+  trackingRef.on('value', snapshot => {
+    const o = snapshot.val();
+    const errorDiv = document.getElementById('trackError');
+    const resultDiv = document.getElementById('trackResult');
+    if(!o){ errorDiv.style.display = 'block'; resultDiv.style.display = 'none'; return; }
+    errorDiv.style.display = 'none';
+    resultDiv.style.display = 'block';
+    document.getElementById('trackName').textContent = o.nom || '';
+    document.getElementById('trackLinge').textContent = o.linge || '';
+    const currentIdx = STAGES.findIndex(s => s.id === o.status);
+    document.getElementById('trackTimeline').innerHTML = STAGES.map((s,i)=>{
+      let cls = i < currentIdx ? 'done' : (i === currentIdx ? 'current' : '');
+      return `<div class="t-step ${cls}"><div class="t-dot">${i < currentIdx ? '✓' : s.icon}</div><div class="t-line"></div><div class="t-label">${s.label}</div></div>`;
+    }).join('');
+  });
+}
+
+// ---- Tabs ----
+function switchTab(tab){
+  document.getElementById('viewLinge').classList.toggle('active', tab==='linge');
+  document.getElementById('viewSuivi').classList.toggle('active', tab==='suivi');
+  document.getElementById('tabLinge').classList.toggle('active', tab==='linge');
+  document.getElementById('tabSuivi').classList.toggle('active', tab==='suivi');
+}
+function switchSub(sub){
+  document.getElementById('ramassageView').style.display = sub==='ramassage' ? 'block':'none';
+  document.getElementById('abonnementView').style.display = sub==='abonnement' ? 'block':'none';
+  document.getElementById('subRamassage').classList.toggle('active', sub==='ramassage');
+  document.getElementById('subAbonnement').classList.toggle('active', sub==='abonnement');
+}
+
+// ---- Ajouts panier ----
+function addRamassageToCart(){
+  const chosen = lingeItems.filter(it => (lingeQty[it.id]||0) > 0);
+  if(chosen.length===0){ alert('Choisis au moins un type de linge (utilise les boutons + / −).'); return; }
+  chosen.forEach(it=>{
+    const qty = lingeQty[it.id];
+    cart.push({label: `${it.name} (${qty} ${it.unit})`, price: it.price, qty: qty});
+    lingeQty[it.id] = 0;
+    document.getElementById('qty-'+it.id).textContent = 0;
+  });
+  pickupDate = document.getElementById('lingeDate').value || pickupDate;
+  updateCartUI();
+  openCart();
+}
+function addPlanToCart(name, price){
+  cart.push({label:`Abonnement ${name}`, price, qty:1});
+  updateCartUI();
+  openCart();
+}
+// ---- UI panier ----
+function updateCartUI(){
+  const count = cart.reduce((s,c)=>s+c.qty,0);
+  document.getElementById('cartBadge').style.display = count>0 ? 'flex':'none';
+  document.getElementById('cartBadge').textContent = count;
+  document.getElementById('fabBadge').textContent = count;
+  document.getElementById('fabCart').classList.toggle('show', count>0);
+
+  const itemsDiv = document.getElementById('cartItems');
+  const footer = document.getElementById('cartFooter');
+  if(cart.length===0){
+    itemsDiv.innerHTML = "<div class=\"empty-cart\">Ton panier est vide pour l'instant.</div>";
+    footer.style.display = 'none';
+    return;
+  }
+  footer.style.display = 'block';
+  let total = 0;
+  let html = cart.map((c,i)=>{
+    total += c.price * c.qty;
+    return `<div class="cart-item"><span class="ci-name">${c.qty>1?c.qty+'x ':''}${c.label}</span><span>${(c.price*c.qty).toLocaleString('fr-FR')} F</span><span class="ci-remove" onclick="removeItem(${i})">✕</span></div>`;
+  }).join('');
+  if(pickupDate){
+    html += `<div class="pickup-note">📅 Ramassage souhaité le ${pickupDate}</div>`;
+  }
+  itemsDiv.innerHTML = html;
+  document.getElementById('cartTotal').textContent = total.toLocaleString('fr-FR') + ' F';
+  document.getElementById('acompteAmount').textContent = Math.round(total/2).toLocaleString('fr-FR') + ' F';
+  document.getElementById('resteAmount').textContent = (total - Math.round(total/2)).toLocaleString('fr-FR') + ' F';
+}
+function removeItem(i){ cart.splice(i,1); updateCartUI(); }
+
+function openCart(){ document.getElementById('overlay').classList.add('active'); document.getElementById('drawer').classList.add('active'); }
+function closeCart(){ document.getElementById('overlay').classList.remove('active'); document.getElementById('drawer').classList.remove('active'); }
+
+function setPay(mode){
+  payMode = mode;
+  document.getElementById('payAcompte').classList.toggle('active', mode==='acompte');
+  document.getElementById('payLivraison').classList.toggle('active', mode==='livraison');
+  document.getElementById('payNoteAcompte').classList.toggle('show', mode==='acompte');
+  document.getElementById('payNoteLivraison').classList.toggle('show', mode==='livraison');
+}
+
+// ---- Envoi commande WhatsApp ----
+function sendOrder(){
+  try {
+    const nom = document.getElementById('custNom').value.trim();
+    const tel = document.getElementById('custTel').value.trim();
+    const adresse = document.getElementById('custAdresse').value.trim();
+    if(!nom || !tel || !adresse){ alert('Merci de remplir ton nom, ton téléphone et ton adresse.'); return; }
+    if(cart.length===0){ alert('Ton panier est vide.'); return; }
+
+    let total = 0;
+    let lines = cart.map(c=>{
+      total += c.price*c.qty;
+      return `- ${c.qty>1?c.qty+'x ':''}${c.label} : ${(c.price*c.qty).toLocaleString('fr-FR')} F`;
+    }).join('%0A');
+
+    const acompte = Math.round(total/2);
+    const reste = total - acompte;
+    const payTxt = payMode==='acompte'
+      ? `Acompte 50% (${acompte.toLocaleString('fr-FR')} F via Wave/OM), reste ${reste.toLocaleString('fr-FR')} F à la livraison`
+      : `Paiement total (${total.toLocaleString('fr-FR')} F) à la livraison`;
+    const dateTxt = pickupDate ? `%0A📅 Ramassage souhaité : ${pickupDate}` : '';
+
+    const message = `Bonjour MF Clean, je souhaite passer une commande :%0A%0A${lines}%0A%0ATotal : ${total.toLocaleString('fr-FR')} F${dateTxt}%0A%0A👤 Nom : ${nom}%0A📞 Tél : ${tel}%0A📍 Adresse : ${adresse}%0A💳 Paiement : ${payTxt}`;
+
+    window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${message}`, '_blank');
+  } catch(err) {
+    alert('ERREUR : ' + err.message);
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<!--
+  MF CLEAN — Page d'avis client (destination du QR code sur les sachets)
+
+  ⚠️ AVANT DE PUBLIER : remplace les 3 liens réseaux sociaux plus bas
+  (cherche "REMPLACE-MOI" dans le code) par tes vrais liens Instagram / TikTok / Facebook.
+
+  Les avis envoyés sont sauvegardés automatiquement (visibles par toi, section admin cachée
+  en bas — appuie 5 fois rapidement sur le logo "MF CLEAN" en haut pour les voir).
+-->
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+<title>MF Clean — Votre avis</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --navy:#0E1E3D;
+    --navy-soft:#16294f;
+    --orange:#F4791F;
+    --orange-soft:#ffe4cc;
+    --cream:#FBF8F3;
+    --stitch:#CDBFA8;
+    --ink:#241a10;
+    --muted:#8a7f6e;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    font-family:'Poppins',sans-serif;
+    background:var(--navy);
+    background-image:
+      radial-gradient(circle at 15% 10%, rgba(244,121,31,0.18), transparent 40%),
+      radial-gradient(circle at 90% 85%, rgba(244,121,31,0.12), transparent 45%);
+    min-height:100vh;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:28px 16px 60px;
+    color:var(--ink);
+  }
+  .wrap{width:100%;max-width:420px;}
+  .brand{
+    text-align:center;
+    margin-bottom:22px;
+    user-select:none;
+  }
+  .brand .word{
+    font-weight:800;
+    font-size:22px;
+    letter-spacing:1px;
+    color:#fff;
+  }
+  .brand .word span{color:var(--orange);}
+  .brand .tag{
+    font-family:'Space Mono',monospace;
+    font-size:10.5px;
+    letter-spacing:3px;
+    color:#a9b4cc;
+    margin-top:4px;
+    text-transform:uppercase;
+  }
+
+  /* ===== Carte façon étiquette de vêtement ===== */
+  .card{
+    position:relative;
+    background:var(--cream);
+    border-radius:18px;
+    padding:34px 26px 28px;
+    box-shadow:0 20px 50px rgba(0,0,0,0.35);
+  }
+  .card::before{
+    content:"";
+    position:absolute;
+    inset:10px;
+    border:1.5px dashed var(--stitch);
+    border-radius:12px;
+    pointer-events:none;
+  }
+  .punch{
+    position:absolute;
+    top:-13px;
+    left:50%;
+    transform:translateX(-50%);
+    width:26px;height:26px;
+    background:var(--navy);
+    border-radius:50%;
+    box-shadow:0 0 0 6px var(--cream), 0 8px 16px rgba(0,0,0,0.3);
+  }
+
+  h1{
+    font-size:19px;
+    font-weight:700;
+    line-height:1.35;
+    margin:6px 0 6px;
+    text-align:center;
+  }
+  .sub{
+    text-align:center;
+    font-size:13px;
+    color:var(--muted);
+    margin:0 0 22px;
+    line-height:1.5;
+  }
+
+  /* Étoiles */
+  .stars{
+    display:flex;
+    justify-content:center;
+    gap:8px;
+    margin-bottom:6px;
+  }
+  .star{
+    font-size:34px;
+    cursor:pointer;
+    color:#e4dccb;
+    transition:transform .15s ease, color .15s ease;
+    line-height:1;
+  }
+  .star.filled{color:var(--orange);transform:scale(1.08);}
+  .star:active{transform:scale(0.9);}
+  .star-label{
+    text-align:center;
+    font-family:'Space Mono',monospace;
+    font-size:11px;
+    letter-spacing:1.5px;
+    text-transform:uppercase;
+    color:var(--orange);
+    height:16px;
+    margin-bottom:22px;
+    font-weight:700;
+  }
+
+  .section-label{
+    font-family:'Space Mono',monospace;
+    font-size:10.5px;
+    letter-spacing:2px;
+    text-transform:uppercase;
+    color:var(--muted);
+    margin:0 0 10px;
+  }
+
+  .chips{
+    display:flex;
+    flex-wrap:wrap;
+    gap:8px;
+    margin-bottom:22px;
+  }
+  .chip{
+    font-size:12.5px;
+    font-weight:500;
+    padding:8px 13px;
+    border-radius:999px;
+    border:1.5px solid #e3dbc9;
+    background:#fff;
+    cursor:pointer;
+    user-select:none;
+    transition:all .15s ease;
+    color:var(--ink);
+  }
+  .chip.active{
+    background:var(--navy);
+    border-color:var(--navy);
+    color:#fff;
+  }
+
+  textarea{
+    width:100%;
+    border:1.5px solid #e3dbc9;
+    border-radius:12px;
+    padding:12px 13px;
+    font-family:'Poppins',sans-serif;
+    font-size:13px;
+    resize:none;
+    background:#fff;
+    color:var(--ink);
+    margin-bottom:20px;
+  }
+  textarea:focus{outline:2px solid var(--orange);outline-offset:1px;}
+
+  .submit-btn{
+    width:100%;
+    background:var(--orange);
+    color:#fff;
+    border:none;
+    border-radius:12px;
+    padding:15px;
+    font-family:'Poppins',sans-serif;
+    font-weight:700;
+    font-size:14.5px;
+    cursor:pointer;
+    transition:transform .12s ease, opacity .12s ease;
+  }
+  .submit-btn:active{transform:scale(0.98);}
+  .submit-btn:disabled{opacity:0.45;cursor:not-allowed;}
+
+  /* ===== Écran de remerciement ===== */
+  .thanks{
+    display:none;
+    text-align:center;
+    animation:fadeIn .4s ease;
+  }
+  @keyframes fadeIn{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}
+  .thanks .emoji{font-size:44px;margin-bottom:8px;}
+  .thanks h2{font-size:19px;margin:0 0 8px;}
+  .thanks p{font-size:13px;color:var(--muted);line-height:1.6;margin:0 0 26px;}
+
+  .social-row{
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+  }
+  .social-btn{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:9px;
+    padding:13px;
+    border-radius:12px;
+    text-decoration:none;
+    font-weight:600;
+    font-size:13.5px;
+    border:1.5px solid var(--navy);
+    color:var(--navy);
+    transition:all .15s ease;
+  }
+  .social-btn:active{transform:scale(0.98);}
+  .social-btn.ig{background:var(--navy);color:#fff;}
+
+  .stitch-divider{
+    border:none;
+    border-top:1.5px dashed var(--stitch);
+    margin:24px 0;
+  }
+
+  .footer-note{
+    text-align:center;
+    font-family:'Space Mono',monospace;
+    font-size:10px;
+    letter-spacing:1px;
+    color:#5b6a8f;
+    margin-top:18px;
+  }
+
+  /* ===== Admin caché ===== */
+  .admin{
+    display:none;
+    margin-top:16px;
+    background:var(--cream);
+    border-radius:14px;
+    padding:16px;
+    max-height:260px;
+    overflow-y:auto;
+  }
+  .admin h3{font-size:13px;margin:0 0 10px;}
+  .admin-entry{
+    font-size:12px;
+    padding:8px 0;
+    border-bottom:1px solid #eee2cf;
+  }
+  .admin-entry b{color:var(--orange);}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="brand" id="brandTap">
+    <div class="word">MF <span>CLEAN</span></div>
+    <div class="tag">Votre avis, notre histoire</div>
+  </div>
+
+  <div class="card">
+    <div class="punch"></div>
+
+    <!-- Formulaire -->
+    <div id="formView">
+      <h1>Comment était votre passage chez nous ?</h1>
+      <p class="sub">30 secondes pour nous aider à écrire une meilleure histoire, ensemble.</p>
+
+      <div class="stars" id="stars">
+        <span class="star" data-v="1">★</span>
+        <span class="star" data-v="2">★</span>
+        <span class="star" data-v="3">★</span>
+        <span class="star" data-v="4">★</span>
+        <span class="star" data-v="5">★</span>
+      </div>
+      <div class="star-label" id="starLabel"></div>
+
+      <div class="section-label">Ce qui vous a marqué (facultatif)</div>
+      <div class="chips" id="chips">
+        <div class="chip" data-c="Rapide ⚡">Rapide ⚡</div>
+        <div class="chip" data-c="La qualité du linge ✨">La qualité du linge ✨</div>
+        <div class="chip" data-c="Accueil chaleureux 😊">Accueil chaleureux 😊</div>
+        <div class="chip" data-c="Ponctuel ⏰">Ponctuel ⏰</div>
+        <div class="chip" data-c="Bon rapport qualité-prix 💰">Bon rapport qualité-prix 💰</div>
+      </div>
+
+      <div class="section-label">Un mot pour nous (facultatif)</div>
+      <textarea id="comment" rows="3" placeholder="Écrivez ici..."></textarea>
+
+      <button class="submit-btn" id="submitBtn" disabled>Envoyer mon avis</button>
+    </div>
+
+    <!-- Remerciement -->
+    <div class="thanks" id="thanksView">
+      <div class="emoji">🙏</div>
+      <h2>Merci beaucoup !</h2>
+      <p>Chaque avis nous aide à écrire notre histoire, une étape à la fois. On a hâte de vous laver encore plus propre la prochaine fois 😊</p>
+
+      <hr class="stitch-divider">
+
+      <div class="section-label" style="text-align:center;margin-bottom:14px;">Suivez-nous</div>
+      <div class="social-row">
+        <a class="social-btn ig" href="https://www.instagram.com/mfclean221/" target="_blank" rel="noopener">📸 Instagram</a>
+        <a class="social-btn" href="https://www.tiktok.com/@mf.clean1" target="_blank" rel="noopener">🎵 TikTok</a>
+        <a class="social-btn" href="https://www.facebook.com/share/19TxKQDmrz/?mibextid=wwXIfr" target="_blank" rel="noopener">👍 Facebook</a>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="footer-note">MF CLEAN · CROISEMENT NDIAKHIRATE · DAKAR</div>
+
+</div>
+
+<script>
+let rating = 0;
+let selectedChips = new Set();
+const starLabels = {1:"Décevant",2:"Correct",3:"Bien",4:"Très bien",5:"Excellent"};
+
+const stars = document.querySelectorAll('.star');
+const starLabel = document.getElementById('starLabel');
+const submitBtn = document.getElementById('submitBtn');
+
+stars.forEach(star => {
+  star.addEventListener('click', () => {
+    rating = parseInt(star.dataset.v);
+    stars.forEach(s => s.classList.toggle('filled', parseInt(s.dataset.v) <= rating));
+    starLabel.textContent = starLabels[rating];
+    submitBtn.disabled = false;
+  });
+});
+
+document.querySelectorAll('.chip').forEach(chip => {
+  chip.addEventListener('click', () => {
+    const val = chip.dataset.c;
+    if (selectedChips.has(val)) { selectedChips.delete(val); chip.classList.remove('active'); }
+    else { selectedChips.add(val); chip.classList.add('active'); }
+  });
+});
+
+submitBtn.addEventListener('click', async () => {
+  const entry = {
+    note: rating + " / 5 (" + starLabels[rating] + ")",
+    points_forts: Array.from(selectedChips).join(', ') || 'Aucun',
+    commentaire: document.getElementById('comment').value.trim() || '(pas de commentaire)',
+    date: new Date().toLocaleString('fr-FR')
+  };
+
+  submitBtn.disabled = true;
+  submitBtn.textContent = 'Envoi...';
+
+  try {
+    await fetch('https://formspree.io/f/mrpzklbl', {
+      method: 'POST',
+      headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' },
+      body: JSON.stringify(entry)
+    });
+  } catch (e) { console.error('Formspree error', e); }
+
+  document.getElementById('formView').style.display = 'none';
+  document.getElementById('thanksView').style.display = 'block';
+});
+
+</script>
+</body>
+</html>

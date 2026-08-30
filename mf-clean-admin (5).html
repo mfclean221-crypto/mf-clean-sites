@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<!--
+  MF CLEAN — Page ADMIN (usage interne uniquement, ne pas partager ce lien aux clients)
+
+  ⚠️ À FAIRE AVANT DE PUBLIER (cherche "MODIFIE-MOI") :
+  1. Change le code d'accès admin (par défaut : 710905632)
+  2. Une fois que tu as publié mf-clean-suivi.html sur Netlify, colle son lien dans TRACKING_PAGE_URL
+
+  Note : ta base Firebase est en "mode test" — elle reste ouverte en lecture/écriture
+  pendant 30 jours. Après ça, Firebase te demandera de configurer des règles de sécurité.
+  Dis-le-moi le moment venu, je t'aiderai à les régler.
+-->
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+<title>MF Clean — Admin Suivi</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
+<style>
+  :root{
+    --navy:#0E1E3D; --orange:#F4791F; --cream:#FBF8F3;
+    --line:#e9e2d4; --ink:#241a10; --muted:#8a7f6e;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{font-family:'Poppins',sans-serif;background:var(--cream);color:var(--ink);padding-bottom:40px;}
+  header{background:var(--navy);padding:16px 18px;position:sticky;top:0;z-index:10;}
+  .brand-word{font-weight:800;font-size:19px;color:#fff;}
+  .brand-word span{color:var(--orange);}
+  .brand-sub{font-family:'Space Mono',monospace;font-size:10px;letter-spacing:2px;color:#a9b4cc;margin-top:2px;}
+  .container{max-width:520px;margin:0 auto;padding:18px 16px;}
+
+  /* Gate */
+  .gate{max-width:340px;margin:60px auto;text-align:center;padding:0 20px;}
+  .gate input{width:100%;text-align:center;font-size:18px;letter-spacing:3px;padding:14px;border-radius:12px;border:1.5px solid var(--line);margin-bottom:14px;}
+  .gate button{width:100%;background:var(--orange);color:#fff;border:none;border-radius:12px;padding:14px;font-weight:700;font-size:14px;cursor:pointer;}
+
+  .section-title{font-size:15px;font-weight:700;margin:6px 0 12px;}
+  .card{background:#fff;border:1.5px solid var(--line);border-radius:14px;padding:16px;margin-bottom:16px;}
+  .field-label{font-family:'Space Mono',monospace;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin:0 0 6px;}
+  input[type=text],input[type=tel],textarea{width:100%;border:1.5px solid var(--line);border-radius:10px;padding:11px 12px;font-family:'Poppins',sans-serif;font-size:13.5px;margin-bottom:12px;}
+  textarea{resize:none;}
+  .btn{width:100%;background:var(--orange);color:#fff;border:none;border-radius:12px;padding:13px;font-weight:700;font-size:13.5px;cursor:pointer;}
+  .btn-navy{background:var(--navy);}
+  .btn-outline{background:#fff;color:var(--navy);border:1.5px solid var(--navy);}
+  .btn-small{padding:9px;font-size:12px;}
+
+  .order-card{background:#fff;border:1.5px solid var(--line);border-radius:14px;padding:14px;margin-bottom:12px;}
+  .order-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;}
+  .order-id{font-family:'Space Mono',monospace;font-size:11px;color:var(--orange);font-weight:700;}
+  .order-name{font-size:13.5px;font-weight:700;margin-top:2px;}
+  .order-status{font-size:11.5px;color:var(--muted);margin-bottom:10px;}
+  .order-status b{color:var(--navy);}
+  .order-actions{display:flex;gap:8px;}
+  .empty{text-align:center;color:var(--muted);font-size:13px;padding:24px 0;}
+</style>
+</head>
+<body>
+
+<div class="gate" id="gateView">
+  <div class="brand-word" style="text-align:center;margin-bottom:20px;"><span>MF</span> CLEAN</div>
+  <div class="field-label">Code d'accès admin</div>
+  <input type="text" id="accessCode" placeholder="••••••">
+  <button onclick="checkAccess()">Entrer</button>
+</div>
+
+<div id="appView" style="display:none;">
+  <header>
+    <div class="brand-word"><span>MF</span> CLEAN</div>
+    <div class="brand-sub">ADMIN · SUIVI DE COMMANDE</div>
+  </header>
+
+  <div class="container">
+    <div class="section-title">➕ Nouvelle commande</div>
+    <div class="card">
+      <div class="field-label">Nom du client</div>
+      <input type="text" id="newNom" placeholder="Ex : Awa Diop">
+      <div class="field-label">Téléphone (avec indicatif si possible)</div>
+      <input type="tel" id="newTel" placeholder="Ex : 77 123 45 67">
+      <div class="field-label">Détail du linge</div>
+      <textarea id="newLinge" rows="2" placeholder="Ex : 5kg lavage & repassage, 2 boubous"></textarea>
+      <button class="btn" onclick="createOrder()">Créer + envoyer le suivi par WhatsApp</button>
+    </div>
+
+    <div class="section-title">📋 Commandes en cours</div>
+    <div id="ordersList"><div class="empty">Aucune commande pour l'instant.</div></div>
+  </div>
+</div>
+
+<script>
+const ACCESS_CODE = "710905632"; // MODIFIE-MOI : change ce code
+const TRACKING_PAGE_URL = "https://extraordinary-druid-7e9e33.netlify.app";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyBYBAlkEoJrlQFNuTtJWlwEsvz5ye-FFSY",
+  authDomain: "mf-clean-suiv.firebaseapp.com",
+  databaseURL: "https://mf-clean-suiv-ff4cc-default-rtdb.firebaseio.com",
+  projectId: "mf-clean-suiv",
+  storageBucket: "mf-clean-suiv.firebasestorage.app",
+  messagingSenderId: "740695704147",
+  appId: "1:740695704147:web:2e95480873332c50663ca6"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+
+const STAGES = [
+  {id:'collecte', label:'Collecte', icon:'📦'},
+  {id:'tri', label:'Tri', icon:'🗂️'},
+  {id:'lavage', label:'Lavage', icon:'🫧'},
+  {id:'sechage', label:'Séchage', icon:'☀️'},
+  {id:'repassage', label:'Repassage', icon:'🔥'},
+  {id:'livraison', label:'Livraison', icon:'🚚'},
+];
+
+function checkAccess(){
+  const val = document.getElementById('accessCode').value.trim();
+  if(val === ACCESS_CODE){
+    document.getElementById('gateView').style.display = 'none';
+    document.getElementById('appView').style.display = 'block';
+    listenOrders();
+  } else {
+    alert('Code incorrect.');
+  }
+}
+
+function genTrackingId(){
+  const digits = Math.floor(1000 + Math.random()*9000);
+  return 'MFC-' + digits;
+}
+
+function createOrder(){
+  const nom = document.getElementById('newNom').value.trim();
+  const tel = document.getElementById('newTel').value.trim();
+  const linge = document.getElementById('newLinge').value.trim();
+  if(!nom || !tel || !linge){ alert('Remplis tous les champs.'); return; }
+
+  const id = genTrackingId();
+  db.ref('commandes/' + id).set({
+    nom, tel, linge,
+    status: 'collecte',
+    createdAt: new Date().toLocaleString('fr-FR')
+  }).then(()=>{
+    document.getElementById('newNom').value = '';
+    document.getElementById('newTel').value = '';
+    document.getElementById('newLinge').value = '';
+
+    const telClean = tel.replace(/\D/g,'');
+    const telIntl = telClean.startsWith('221') ? telClean : '221' + telClean;
+    const msg = `Bonjour ${nom} ! Votre commande MF Clean a bien été prise en compte.%0A%0A📦 Numéro de suivi : ${id}%0A👉 Suivez l'avancement de votre linge ici : ${TRACKING_PAGE_URL}%0A%0AMerci de votre confiance !`;
+    window.open(`https://wa.me/${telIntl}?text=${msg}`, '_blank');
+  }).catch(err=>{
+    alert('ERREUR lors de la création : ' + err.message);
+  });
+}
+
+function listenOrders(){
+  db.ref('commandes').on('value', snapshot => {
+    const data = snapshot.val();
+    const list = document.getElementById('ordersList');
+    if(!data){ list.innerHTML = '<div class="empty">Aucune commande pour l\'instant.</div>'; return; }
+
+    const ids = Object.keys(data).sort().reverse();
+    list.innerHTML = ids.map(id => {
+      const o = data[id];
+      const stageIdx = STAGES.findIndex(s => s.id === o.status);
+      const stageLabel = STAGES[stageIdx] ? STAGES[stageIdx].icon + ' ' + STAGES[stageIdx].label : o.status;
+      const isLast = stageIdx >= STAGES.length - 1;
+      return `
+        <div class="order-card">
+          <div class="order-top">
+            <div><div class="order-id">${id}</div><div class="order-name">${o.nom}</div></div>
+          </div>
+          <div class="order-status">${o.linge}<br>Étape actuelle : <b>${stageLabel}</b></div>
+          <div class="order-actions">
+            ${isLast ? '' : `<button class="btn btn-navy btn-small" onclick="nextStage('${id}', ${stageIdx})">Étape suivante ▶</button>`}
+            <button class="btn btn-outline btn-small" onclick="notifyClient('${id}')">📲 Notifier</button>
+          </div>
+        </div>
+      `;
+    }).join('');
+  });
+}
+
+function nextStage(id, currentIdx){
+  const next = STAGES[currentIdx + 1];
+  if(!next) return;
+  db.ref('commandes/' + id + '/status').set(next.id);
+}
+
+function notifyClient(id){
+  db.ref('commandes/' + id).once('value').then(snap=>{
+    const o = snap.val();
+    if(!o) return;
+    const stage = STAGES.find(s => s.id === o.status);
+    const telClean = (o.tel || '').replace(/\D/g,'');
+    const telIntl = telClean.startsWith('221') ? telClean : '221' + telClean;
+    const msg = `Bonjour ${o.nom}, petite mise à jour sur votre linge chez MF Clean 👕%0A%0AÉtape actuelle : ${stage.icon} ${stage.label}%0A👉 Suivi complet ici : ${TRACKING_PAGE_URL}%0A(Numéro : ${id})`;
+    window.open(`https://wa.me/${telIntl}?text=${msg}`, '_blank');
+  });
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<!--
+  MF CLEAN — Page de suivi client (celle-ci est publique, à héberger et relier au QR/lien envoyé par WhatsApp)
+-->
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+<title>MF Clean — Suivi de commande</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
+<style>
+  :root{
+    --navy:#0E1E3D; --orange:#F4791F; --cream:#FBF8F3;
+    --line:#e9e2d4; --ink:#241a10; --muted:#8a7f6e;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    font-family:'Poppins',sans-serif;background:var(--navy);color:var(--ink);
+    min-height:100vh;display:flex;align-items:flex-start;justify-content:center;
+    padding:32px 16px 60px;
+    background-image:radial-gradient(circle at 15% 10%, rgba(244,121,31,0.18), transparent 40%);
+  }
+  .wrap{width:100%;max-width:420px;}
+  .brand{text-align:center;margin-bottom:22px;}
+  .brand .word{font-weight:800;font-size:22px;color:#fff;}
+  .brand .word span{color:var(--orange);}
+  .brand .tag{font-family:'Space Mono',monospace;font-size:10.5px;letter-spacing:3px;color:#a9b4cc;margin-top:4px;text-transform:uppercase;}
+
+  .card{background:var(--cream);border-radius:18px;padding:26px 22px;box-shadow:0 20px 50px rgba(0,0,0,.35);}
+  .field-label{font-family:'Space Mono',monospace;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin:0 0 8px;}
+  input{width:100%;text-align:center;font-size:16px;letter-spacing:1px;padding:13px;border-radius:12px;border:1.5px solid var(--line);margin-bottom:12px;font-family:'Space Mono',monospace;text-transform:uppercase;}
+  .btn{width:100%;background:var(--orange);color:#fff;border:none;border-radius:12px;padding:14px;font-weight:700;font-size:13.5px;cursor:pointer;font-family:'Poppins',sans-serif;}
+
+  .result{display:none;margin-top:22px;}
+  .result.show{display:block;}
+  .result-name{font-size:14px;font-weight:700;text-align:center;margin-bottom:2px;}
+  .result-linge{font-size:12px;color:var(--muted);text-align:center;margin-bottom:22px;}
+
+  .timeline{display:flex;flex-direction:column;gap:0;}
+  .step{display:flex;align-items:flex-start;gap:12px;position:relative;padding-bottom:22px;}
+  .step:last-child{padding-bottom:0;}
+  .step-dot{
+    width:34px;height:34px;border-radius:50%;background:#fff;border:2px solid var(--line);
+    display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0;z-index:1;
+  }
+  .step-line{
+    position:absolute;left:17px;top:34px;bottom:0;width:2px;background:var(--line);
+  }
+  .step:last-child .step-line{display:none;}
+  .step-label{font-size:13px;font-weight:600;padding-top:6px;color:var(--muted);}
+
+  .step.done .step-dot{background:var(--navy);border-color:var(--navy);color:#fff;}
+  .step.done .step-line{background:var(--navy);}
+  .step.done .step-label{color:var(--ink);}
+
+  .step.current .step-dot{background:var(--orange);border-color:var(--orange);color:#fff;transform:scale(1.12);}
+  .step.current .step-label{color:var(--navy);font-weight:700;}
+
+  .error-msg{display:none;text-align:center;color:#c0392b;font-size:12.5px;margin-top:14px;}
+  .error-msg.show{display:block;}
+
+  .footer-note{text-align:center;font-family:'Space Mono',monospace;font-size:10px;letter-spacing:1px;color:#a9b4cc;margin-top:18px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="brand">
+    <div class="word"><span>MF</span> CLEAN</div>
+    <div class="tag">Suivi de commande</div>
+  </div>
+
+  <div class="card">
+    <div class="field-label">Numéro de suivi (reçu par WhatsApp)</div>
+    <input type="text" id="trackingInput" placeholder="MFC-1234">
+    <button class="btn" onclick="trackOrder()">Suivre ma commande</button>
+    <div class="error-msg" id="errorMsg">Numéro introuvable. Vérifie qu'il est bien écrit (ex : MFC-1234).</div>
+
+    <div class="result" id="resultView">
+      <div class="result-name" id="resultName"></div>
+      <div class="result-linge" id="resultLinge"></div>
+      <div class="timeline" id="timeline"></div>
+    </div>
+  </div>
+
+  <div class="footer-note">MF CLEAN · CROISEMENT NDIAKHIRATE · DAKAR</div>
+</div>
+
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyBYBAlkEoJrlQFNuTtJWlwEsvz5ye-FFSY",
+  authDomain: "mf-clean-suiv.firebaseapp.com",
+  databaseURL: "https://mf-clean-suiv-ff4cc-default-rtdb.firebaseio.com",
+  projectId: "mf-clean-suiv",
+  storageBucket: "mf-clean-suiv.firebasestorage.app",
+  messagingSenderId: "740695704147",
+  appId: "1:740695704147:web:2e95480873332c50663ca6"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+
+const STAGES = [
+  {id:'collecte', label:'Collecte', icon:'📦'},
+  {id:'tri', label:'Tri', icon:'🗂️'},
+  {id:'lavage', label:'Lavage', icon:'🫧'},
+  {id:'sechage', label:'Séchage', icon:'☀️'},
+  {id:'repassage', label:'Repassage', icon:'🔥'},
+  {id:'livraison', label:'Livraison', icon:'🚚'},
+];
+
+let currentRef = null;
+
+function trackOrder(){
+  const id = document.getElementById('trackingInput').value.trim().toUpperCase();
+  if(!id){ return; }
+
+  if(currentRef){ currentRef.off(); }
+  currentRef = db.ref('commandes/' + id);
+
+  currentRef.on('value', snapshot => {
+    const o = snapshot.val();
+    const errorMsg = document.getElementById('errorMsg');
+    const resultView = document.getElementById('resultView');
+
+    if(!o){
+      errorMsg.classList.add('show');
+      resultView.classList.remove('show');
+      return;
+    }
+    errorMsg.classList.remove('show');
+    resultView.classList.add('show');
+
+    document.getElementById('resultName').textContent = o.nom;
+    document.getElementById('resultLinge').textContent = o.linge;
+
+    const currentIdx = STAGES.findIndex(s => s.id === o.status);
+    const timeline = document.getElementById('timeline');
+    timeline.innerHTML = STAGES.map((s, i) => {
+      let cls = '';
+      if(i < currentIdx) cls = 'done';
+      else if(i === currentIdx) cls = 'current';
+      return `
+        <div class="step ${cls}">
+          <div class="step-dot">${i < currentIdx ? '✓' : s.icon}</div>
+          <div class="step-line"></div>
+          <div class="step-label">${s.label}</div>
+        </div>
+      `;
+    }).join('');
+  });
+}
+</script>
+</body>
+</html>
