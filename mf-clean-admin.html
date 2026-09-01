@@ -19,6 +19,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
 <style>
   :root{
     --navy:#0E1E3D; --orange:#F4791F; --cream:#FBF8F3;
@@ -62,9 +63,12 @@
 
 <div class="gate" id="gateView">
   <div class="brand-word" style="text-align:center;margin-bottom:20px;"><span>MF</span> CLEAN</div>
-  <div class="field-label">Code d'accès admin</div>
-  <input type="text" id="accessCode" placeholder="••••••">
-  <button onclick="checkAccess()">Entrer</button>
+  <div class="field-label">Email</div>
+  <input type="text" id="loginEmail" placeholder="ton@email.com" style="margin-bottom:14px;">
+  <div class="field-label">Mot de passe</div>
+  <input type="text" id="loginPassword" placeholder="••••••••">
+  <button onclick="checkAccess()">Se connecter</button>
+  <div id="loginError" style="display:none;color:#c0392b;font-size:12px;margin-top:12px;text-align:center;">Email ou mot de passe incorrect.</div>
 </div>
 
 <div id="appView" style="display:none;">
@@ -91,7 +95,6 @@
 </div>
 
 <script>
-const ACCESS_CODE = "710905632"; // MODIFIE-MOI : change ce code
 const TRACKING_PAGE_URL = "https://mfclean221-crypto.github.io/mf-clean-sites/";
 
 const firebaseConfig = {
@@ -105,6 +108,7 @@ const firebaseConfig = {
 };
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
+const auth = firebase.auth();
 
 const STAGES = [
   {id:'collecte', label:'Collecte', icon:'📦'},
@@ -116,14 +120,19 @@ const STAGES = [
 ];
 
 function checkAccess(){
-  const val = document.getElementById('accessCode').value.trim();
-  if(val === ACCESS_CODE){
+  const email = document.getElementById('loginEmail').value.trim();
+  const password = document.getElementById('loginPassword').value;
+  const errorDiv = document.getElementById('loginError');
+  errorDiv.style.display = 'none';
+
+  auth.signInWithEmailAndPassword(email, password).then(()=>{
     document.getElementById('gateView').style.display = 'none';
     document.getElementById('appView').style.display = 'block';
     listenOrders();
-  } else {
-    alert('Code incorrect.');
-  }
+  }).catch(err=>{
+    errorDiv.textContent = 'Erreur : ' + err.message;
+    errorDiv.style.display = 'block';
+  });
 }
 
 function genTrackingId(){
