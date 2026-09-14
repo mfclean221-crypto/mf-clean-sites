@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <!--
   MF CLEAN — Site de commande en ligne
@@ -556,7 +557,13 @@ function setPay(mode){
   document.getElementById('payNoteLivraison').classList.toggle('show', mode==='livraison');
 }
 
-// ---- Envoi commande WhatsApp ----
+// ---- Génère un identifiant de suivi ----
+function genTrackingId(){
+  const digits = Math.floor(1000 + Math.random()*9000);
+  return 'MFC-' + digits;
+}
+
+// ---- Envoi commande : enregistrement Firebase + notifications WhatsApp ----
 function sendOrder(){
   try {
     const nom = document.getElementById('custNom').value.trim();
@@ -566,21 +573,46 @@ function sendOrder(){
     if(cart.length===0){ alert('Ton panier est vide.'); return; }
 
     let total = 0;
-    let lines = cart.map(c=>{
+    const lingeTxt = cart.map(c=>{
       total += c.price*c.qty;
-      return `- ${c.qty>1?c.qty+'x ':''}${c.label} : ${(c.price*c.qty).toLocaleString('fr-FR')} F`;
-    }).join('%0A');
+      return `${c.qty>1?c.qty+'x ':''}${c.label}`;
+    }).join(', ');
+    let linesForWa = cart.map(c=>`- ${c.qty>1?c.qty+'x ':''}${c.label} : ${(c.price*c.qty).toLocaleString('fr-FR')} F`).join('%0A');
 
     const acompte = Math.round(total/2);
     const reste = total - acompte;
     const payTxt = payMode==='acompte'
       ? `Acompte 50% (${acompte.toLocaleString('fr-FR')} F via Wave/OM), reste ${reste.toLocaleString('fr-FR')} F à la livraison`
       : `Paiement total (${total.toLocaleString('fr-FR')} F) à la livraison`;
-    const dateTxt = pickupDate ? `%0A📅 Ramassage souhaité : ${pickupDate}` : '';
+    const dateTxt = pickupDate ? pickupDate : '';
 
-    const message = `Bonjour MF Clean, je souhaite passer une commande :%0A%0A${lines}%0A%0ATotal : ${total.toLocaleString('fr-FR')} F${dateTxt}%0A%0A👤 Nom : ${nom}%0A📞 Tél : ${tel}%0A📍 Adresse : ${adresse}%0A💳 Paiement : ${payTxt}`;
+    const id = genTrackingId();
 
-    window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${message}`, '_blank');
+    // 1) Enregistrement direct dans Firebase : c'est la source de vérité, pas le message WhatsApp
+    db.ref('commandes/' + id).set({
+      nom, tel, adresse,
+      linge: lingeTxt,
+      total, acompte, reste,
+      payMode,
+      pickupDate: dateTxt,
+      status: 'collecte',
+      createdAt: new Date().toLocaleString('fr-FR')
+    }).then(()=>{
+      // 2) Notification à MOUHAMED : infos essentielles (nom/tél/adresse) en PREMIER,
+      //    pour que rien ne se perde même si le message est tronqué sur certains téléphones.
+      const msgToMe = `🆕 NOUVELLE COMMANDE ${id}%0A👤 Nom : ${nom}%0A📞 Tél : ${tel}%0A📍 Adresse : ${adresse}%0A💳 Paiement : ${payTxt}%0A%0A${linesForWa}%0A%0ATotal : ${total.toLocaleString('fr-FR')} F${dateTxt ? '%0A📅 Ramassage souhaité : ' + dateTxt : ''}`;
+      window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${msgToMe}`, '_blank');
+
+      // 3) Confirmation au CLIENT avec son numéro de suivi
+      const telClean = tel.replace(/\D/g,'');
+      const telIntl = telClean.startsWith('221') ? telClean : '221' + telClean;
+      const msgToClient = `Bonjour ${nom} ! Ta commande MF Clean a bien été enregistrée ✅%0A%0A📦 Numéro de suivi : ${id}%0A👉 Suis l'avancement de ton linge directement sur le site, section "Suivi de commande".%0A%0AMerci de ta confiance !`;
+      setTimeout(()=>{ window.open(`https://wa.me/${telIntl}?text=${msgToClient}`, '_blank'); }, 800);
+
+      alert('Commande enregistrée ! Ton numéro de suivi est : ' + id);
+    }).catch(err=>{
+      alert('ERREUR lors de l\'enregistrement : ' + err.message + '\nRéessaie, ou contacte-nous directement au 71 090 56 32.');
+    });
   } catch(err) {
     alert('ERREUR : ' + err.message);
   }
@@ -588,3 +620,4 @@ function sendOrder(){
 </script>
 </body>
 </html>
+
