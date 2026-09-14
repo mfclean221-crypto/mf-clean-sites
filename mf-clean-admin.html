@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <!--
   MF CLEAN — Page ADMIN (usage interne uniquement, ne pas partager ce lien aux clients)
@@ -169,12 +170,19 @@ function listenOrders(){
       const stageIdx = STAGES.findIndex(s => s.id === o.status);
       const stageLabel = STAGES[stageIdx] ? STAGES[stageIdx].icon + ' ' + STAGES[stageIdx].label : o.status;
       const isLast = stageIdx >= STAGES.length - 1;
+      const totalTxt = o.total ? Number(o.total).toLocaleString('fr-FR') + ' F' : '';
       return `
         <div class="order-card">
           <div class="order-top">
             <div><div class="order-id">${id}</div><div class="order-name">${o.nom}</div></div>
           </div>
-          <div class="order-status">${o.linge}<br>Étape actuelle : <b>${stageLabel}</b></div>
+          <div class="order-status">
+            ${o.linge}<br>
+            ${o.tel ? '📞 ' + o.tel + '<br>' : ''}
+            ${o.adresse ? '📍 ' + o.adresse + '<br>' : ''}
+            ${totalTxt ? '💰 ' + totalTxt + '<br>' : ''}
+            Étape actuelle : <b>${stageLabel}</b>
+          </div>
           <div class="order-actions">
             ${isLast ? '' : `<button class="btn btn-navy btn-small" onclick="nextStage('${id}', ${stageIdx})">Étape suivante ▶</button>`}
             <button class="btn btn-outline btn-small" onclick="notifyClient('${id}')">📲 Notifier</button>
