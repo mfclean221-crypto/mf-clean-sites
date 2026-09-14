@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <!--
   MF CLEAN — Site de commande en ligne
@@ -588,7 +587,13 @@ function sendOrder(){
 
     const id = genTrackingId();
 
-    // 1) Enregistrement direct dans Firebase : c'est la source de vérité, pas le message WhatsApp
+    // 1) Ouvrir WhatsApp TOUT DE SUITE (dans le même clic), pour que le navigateur
+    //    ne le bloque pas comme un pop-up. Infos essentielles en PREMIER.
+    const msgToMe = `🆕 NOUVELLE COMMANDE ${id}%0A👤 Nom : ${nom}%0A📞 Tél : ${tel}%0A📍 Adresse : ${adresse}%0A💳 Paiement : ${payTxt}%0A%0A${linesForWa}%0A%0ATotal : ${total.toLocaleString('fr-FR')} F${dateTxt ? '%0A📅 Ramassage souhaité : ' + dateTxt : ''}`;
+    window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${msgToMe}`, '_blank');
+
+    // 2) Enregistrement dans Firebase en parallèle : c'est la source de vérité,
+    //    même si le client ferme WhatsApp sans envoyer le message.
     db.ref('commandes/' + id).set({
       nom, tel, adresse,
       linge: lingeTxt,
@@ -598,20 +603,9 @@ function sendOrder(){
       status: 'collecte',
       createdAt: new Date().toLocaleString('fr-FR')
     }).then(()=>{
-      // 2) Notification à MOUHAMED : infos essentielles (nom/tél/adresse) en PREMIER,
-      //    pour que rien ne se perde même si le message est tronqué sur certains téléphones.
-      const msgToMe = `🆕 NOUVELLE COMMANDE ${id}%0A👤 Nom : ${nom}%0A📞 Tél : ${tel}%0A📍 Adresse : ${adresse}%0A💳 Paiement : ${payTxt}%0A%0A${linesForWa}%0A%0ATotal : ${total.toLocaleString('fr-FR')} F${dateTxt ? '%0A📅 Ramassage souhaité : ' + dateTxt : ''}`;
-      window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${msgToMe}`, '_blank');
-
-      // 3) Confirmation au CLIENT avec son numéro de suivi
-      const telClean = tel.replace(/\D/g,'');
-      const telIntl = telClean.startsWith('221') ? telClean : '221' + telClean;
-      const msgToClient = `Bonjour ${nom} ! Ta commande MF Clean a bien été enregistrée ✅%0A%0A📦 Numéro de suivi : ${id}%0A👉 Suis l'avancement de ton linge directement sur le site, section "Suivi de commande".%0A%0AMerci de ta confiance !`;
-      setTimeout(()=>{ window.open(`https://wa.me/${telIntl}?text=${msgToClient}`, '_blank'); }, 800);
-
-      alert('Commande enregistrée ! Ton numéro de suivi est : ' + id);
+      alert('Commande enregistrée ! Ton numéro de suivi est : ' + id + '\nGarde-le pour suivre ton linge sur le site.');
     }).catch(err=>{
-      alert('ERREUR lors de l\'enregistrement : ' + err.message + '\nRéessaie, ou contacte-nous directement au 71 090 56 32.');
+      alert('La fenêtre WhatsApp s\'est ouverte, mais l\'enregistrement a échoué : ' + err.message + '\nContacte-nous directement au 71 090 56 32 pour confirmer.');
     });
   } catch(err) {
     alert('ERREUR : ' + err.message);
@@ -620,4 +614,3 @@ function sendOrder(){
 </script>
 </body>
 </html>
-
